@@ -25,6 +25,8 @@ Sub CountEmailsInTestFolder()
     Dim folderParts() As String
     Dim currentFolder As Outlook.Folder
     Dim folderIndex As Integer
+    Dim restrictedItems As Outlook.Items
+    Dim filterString As String
 
     ' Get the MAPI namespace
     Set objNamespace = Application.GetNamespace("MAPI")
@@ -105,37 +107,43 @@ Sub CountEmailsInTestFolder()
     emailCount = 0
     totalCount = objTestFolder.Items.Count
 
-    ' Loop through all items in the folder
-    For Each objItem In objTestFolder.Items
+    ' Build filter string for date range using Restrict method
+    ' This significantly improves performance for large folders
+    filterString = "[ReceivedTime] >= '" & Format(startDate, "mm/dd/yyyy hh:nn AMPM") & "' AND [ReceivedTime] <= '" & Format(endDate, "mm/dd/yyyy hh:nn AMPM") & "'"
+
+    ' Apply the filter to get only emails within the date range
+    Set restrictedItems = objTestFolder.Items.Restrict(filterString)
+
+    ' Sort by ReceivedTime for better performance
+    restrictedItems.Sort "[ReceivedTime]", False
+
+    ' Loop through only the filtered items
+    For Each objItem In restrictedItems
         ' Check if it's a mail item
         If TypeOf objItem Is Outlook.MailItem Then
             Set objMail = objItem
+            emailCount = emailCount + 1
 
-            ' Check if the email is within the date range
-            If objMail.ReceivedTime >= startDate And objMail.ReceivedTime <= endDate Then
-                emailCount = emailCount + 1
-
-                ' Process categories
-                If objMail.Categories <> "" Then
-                    ' Split categories by semicolon (multiple categories possible)
-                    categories = Split(objMail.Categories, ";")
-                    For Each cat In categories
-                        cat = Trim(cat)
-                        If cat <> "" Then
-                            If categoryDict.Exists(cat) Then
-                                categoryDict(cat) = categoryDict(cat) + 1
-                            Else
-                                categoryDict.Add cat, 1
-                            End If
+            ' Process categories
+            If objMail.Categories <> "" Then
+                ' Split categories by semicolon (multiple categories possible)
+                categories = Split(objMail.Categories, ";")
+                For Each cat In categories
+                    cat = Trim(cat)
+                    If cat <> "" Then
+                        If categoryDict.Exists(cat) Then
+                            categoryDict(cat) = categoryDict(cat) + 1
+                        Else
+                            categoryDict.Add cat, 1
                         End If
-                    Next cat
-                Else
-                    ' No category
-                    If categoryDict.Exists("(No Category)") Then
-                        categoryDict("(No Category)") = categoryDict("(No Category)") + 1
-                    Else
-                        categoryDict.Add "(No Category)", 1
                     End If
+                Next cat
+            Else
+                ' No category
+                If categoryDict.Exists("(No Category)") Then
+                    categoryDict("(No Category)") = categoryDict("(No Category)") + 1
+                Else
+                    categoryDict.Add "(No Category)", 1
                 End If
             End If
         End If
@@ -185,6 +193,7 @@ Sub CountEmailsInTestFolder()
 
     ' Clean up
     Set categoryDict = Nothing
+    Set restrictedItems = Nothing
     Set objMail = Nothing
     Set objItem = Nothing
     Set objTestFolder = Nothing
@@ -205,6 +214,7 @@ ErrorHandler:
 
     ' Clean up
     Set categoryDict = Nothing
+    Set restrictedItems = Nothing
     Set objMail = Nothing
     Set objItem = Nothing
     Set objTestFolder = Nothing

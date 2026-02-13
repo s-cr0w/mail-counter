@@ -100,7 +100,7 @@ Breakdown by Category:
 - **Mailbox**: The mailbox must be configured in your Outlook profile
 - **Categories**: The script counts Outlook color categories (the ones you assign via right-click > Categorize)
 - **Multiple Categories**: If an email has multiple categories, it will be counted in each category
-- **Performance**: For folders with thousands of emails, the script may take a few seconds to process
+- **Performance**: The script uses Outlook's `Restrict` method to filter emails by date range BEFORE loading them, making it efficient even for folders with thousands of emails. Only emails within your specified date range are retrieved and processed.
 
 ## Troubleshooting
 
