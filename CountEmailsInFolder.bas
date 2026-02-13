@@ -21,15 +21,30 @@ Sub CountEmailsInTestFolder()
     Dim cat As Variant
     Dim resultMessage As String
     Dim i As Integer
-
-    ' Set the mailbox name
-    mailboxName = "random@example.com"
+    Dim folderPath As String
+    Dim folderParts() As String
+    Dim currentFolder As Outlook.Folder
+    Dim folderIndex As Integer
 
     ' Get the MAPI namespace
     Set objNamespace = Application.GetNamespace("MAPI")
 
     ' Error handling
     On Error GoTo ErrorHandler
+
+    ' Get mailbox name from user
+    mailboxName = InputBox("Enter the mailbox name (e.g., email@example.com):", "Mailbox Name", "random@example.com")
+    If mailboxName = "" Then
+        MsgBox "Operation cancelled.", vbInformation, "Cancelled"
+        Exit Sub
+    End If
+
+    ' Get folder path from user
+    folderPath = InputBox("Enter the folder path (e.g., Inbox/subfolder1/subfolder2):", "Folder Path", "Inbox/test")
+    If folderPath = "" Then
+        MsgBox "Operation cancelled.", vbInformation, "Cancelled"
+        Exit Sub
+    End If
 
     ' Get start date from user
     startDateStr = InputBox("Enter the START date (YYYYMMDD):", "Start Date", Format(Date - 30, "yyyymmdd"))
@@ -70,11 +85,17 @@ Sub CountEmailsInTestFolder()
     ' Access the specified mailbox
     Set objMailbox = objNamespace.Folders(mailboxName)
 
-    ' Get the Inbox folder
-    Set objInbox = objMailbox.Folders("Inbox")
+    ' Parse the folder path and navigate to the target folder
+    folderParts = Split(folderPath, "/")
+    Set currentFolder = objMailbox
 
-    ' Get the "test" subfolder
-    Set objTestFolder = objInbox.Folders("test")
+    ' Navigate through the folder hierarchy
+    For folderIndex = LBound(folderParts) To UBound(folderParts)
+        Set currentFolder = currentFolder.Folders(Trim(folderParts(folderIndex)))
+    Next folderIndex
+
+    ' Set the target folder
+    Set objTestFolder = currentFolder
 
     ' Create a dictionary to store category counts
     Set categoryDict = CreateObject("Scripting.Dictionary")
@@ -124,7 +145,7 @@ Sub CountEmailsInTestFolder()
     resultMessage = "Email Count Report" & vbCrLf
     resultMessage = resultMessage & String(50, "=") & vbCrLf & vbCrLf
     resultMessage = resultMessage & "Mailbox: " & mailboxName & vbCrLf
-    resultMessage = resultMessage & "Folder: Inbox\test" & vbCrLf
+    resultMessage = resultMessage & "Folder: " & Replace(folderPath, "/", "\") & vbCrLf
     resultMessage = resultMessage & "Date Range: " & Format(startDate, "yyyy-mm-dd") & " to " & Format(endDate, "yyyy-mm-dd") & vbCrLf
     resultMessage = resultMessage & String(50, "-") & vbCrLf & vbCrLf
     resultMessage = resultMessage & "Total emails in date range: " & emailCount & vbCrLf & vbCrLf
@@ -167,6 +188,7 @@ Sub CountEmailsInTestFolder()
     Set objMail = Nothing
     Set objItem = Nothing
     Set objTestFolder = Nothing
+    Set currentFolder = Nothing
     Set objInbox = Nothing
     Set objMailbox = Nothing
     Set objNamespace = Nothing
@@ -177,7 +199,8 @@ ErrorHandler:
     MsgBox "Error: " & Err.Description & vbCrLf & vbCrLf & _
            "Please verify that:" & vbCrLf & _
            "1. The mailbox '" & mailboxName & "' exists in your Outlook profile" & vbCrLf & _
-           "2. The 'test' folder exists in the Inbox of this mailbox", _
+           "2. The folder path '" & folderPath & "' exists in this mailbox" & vbCrLf & _
+           "3. The folder path format is correct (e.g., Inbox/subfolder1/subfolder2)", _
            vbCritical, "Error Accessing Folder"
 
     ' Clean up
@@ -185,6 +208,7 @@ ErrorHandler:
     Set objMail = Nothing
     Set objItem = Nothing
     Set objTestFolder = Nothing
+    Set currentFolder = Nothing
     Set objInbox = Nothing
     Set objMailbox = Nothing
     Set objNamespace = Nothing

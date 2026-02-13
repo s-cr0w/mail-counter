@@ -4,25 +4,23 @@ This VBA script counts emails in a specific folder within a date range and displ
 
 ## Features
 
+- **Dynamic Mailbox Selection**: Choose any mailbox in your Outlook profile
+- **Flexible Folder Path**: Navigate to any subfolder using path notation (e.g., Inbox/subfolder1/subfolder2)
 - **Date Range Selection**: Input boxes allow you to specify start and end dates
 - **Total Email Count**: Shows total emails within the specified date range
 - **Category Breakdown**: Displays count for each color category assigned to emails
 - **Sorted Results**: Categories are displayed alphabetically
 
-## Configuration
-
-The script is configured to count emails in:
-- **Mailbox**: random@example.com
-- **Folder**: Inbox > test
-
 ## How It Works
 
-When you run the script:
+When you run the script, you'll be prompted for the following inputs:
 
-1. **Start Date Input**: Enter the beginning date of your range (defaults to 30 days ago)
-2. **End Date Input**: Enter the ending date of your range (defaults to today)
-3. **Processing**: The script scans all emails in the folder within the date range
-4. **Results Display**: A detailed report shows:
+1. **Mailbox Name**: Enter the email address of the mailbox (e.g., random@example.com)
+2. **Folder Path**: Enter the folder path using forward slashes (e.g., Inbox/subfolder1/subfolder2)
+3. **Start Date**: Enter the beginning date in YYYYMMDD format (defaults to 30 days ago)
+4. **End Date**: Enter the ending date in YYYYMMDD format (defaults to today)
+5. **Processing**: The script scans all emails in the specified folder within the date range
+6. **Results Display**: A detailed report shows:
    - Total emails in the date range
    - Count of emails for each color category (Red, Blue, Green, etc.)
    - Count of emails with no category assigned
@@ -50,18 +48,6 @@ When you run the script:
 7. Press `Alt + F8` to open the Macros dialog
 8. Select `CountEmailsInTestFolder` and click **Run**
 
-## Customization
-
-To change the mailbox or folder, edit these lines in the script:
-
-```vb
-' Change the mailbox email address
-mailboxName = "random@example.com"
-
-' Change the folder name (currently set to "test")
-Set objTestFolder = objInbox.Folders("test")
-```
-
 ## Macro Security
 
 If the macro doesn't run, you may need to adjust Outlook's macro security settings:
@@ -78,7 +64,7 @@ Email Count Report
 ==================================================
 
 Mailbox: random@example.com
-Folder: Inbox\test
+Folder: Inbox\subfolder1\subfolder2
 Date Range: 2026-01-01 to 2026-02-13
 --------------------------------------------------
 
@@ -93,17 +79,35 @@ Breakdown by Category:
   Yellow Category: 3
 ```
 
+## Example Input Sequences
+
+**Example 1: Simple folder**
+- Mailbox: `user@company.com`
+- Folder Path: `Inbox/Projects`
+- Start Date: `20260101`
+- End Date: `20260213`
+
+**Example 2: Nested folder**
+- Mailbox: `support@company.com`
+- Folder Path: `Inbox/Clients/CompanyXYZ/Issues`
+- Start Date: `20260201`
+- End Date: `20260213`
+
 ## Notes
 
 - **Date Format**: Use YYYYMMDD format for input (e.g., 20260213 for February 13, 2026)
+- **Folder Path Format**: Use forward slashes (/) to separate folder levels (e.g., Inbox/subfolder1/subfolder2)
+- **Mailbox**: The mailbox must be configured in your Outlook profile
 - **Categories**: The script counts Outlook color categories (the ones you assign via right-click > Categorize)
 - **Multiple Categories**: If an email has multiple categories, it will be counted in each category
 - **Performance**: For folders with thousands of emails, the script may take a few seconds to process
 
 ## Troubleshooting
 
-- Ensure the mailbox "random@example.com" is added to your Outlook profile
-- Verify the "test" folder exists in the Inbox of that mailbox
-- Check that the folder name matches exactly (case-sensitive)
+- Ensure the mailbox you enter is added to your Outlook profile (check the folder pane in Outlook)
+- Verify the folder path exists - use the exact folder names as they appear in Outlook
+- Folder names are case-sensitive - match the capitalization exactly
+- Use forward slashes (/) in the folder path, not backslashes (\)
 - If you get a permission error, ensure you have access to the mailbox
+- For shared mailboxes, make sure they're fully loaded in Outlook before running the script
 - Make sure emails have categories assigned (right-click email > Categorize > pick a color)
