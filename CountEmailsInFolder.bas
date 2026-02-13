@@ -82,10 +82,19 @@ Sub CountEmailsInTestFolder()
         Exit Sub
     End If
 
-    ' Add one day to endDate for the filter (we'll use < instead of <=)
-    ' This ensures we get all emails on the end date through 23:59:59
+    ' Ensure we have clean date boundaries (midnight for start, midnight next day for end)
+    ' This approach avoids any time component issues
+    Dim filterStartDate As String
+    Dim filterEndDate As String
+
+    ' Format dates explicitly for Outlook Restrict compatibility
+    ' Start of day: the parsed date at 00:00:00
+    filterStartDate = Month(startDate) & "/" & Day(startDate) & "/" & Year(startDate) & " 12:00 AM"
+
+    ' End of day: next day at 00:00:00 (exclusive upper bound)
     Dim endDatePlusOne As Date
-    endDatePlusOne = endDate + 1
+    endDatePlusOne = DateAdd("d", 1, endDate)
+    filterEndDate = Month(endDatePlusOne) & "/" & Day(endDatePlusOne) & "/" & Year(endDatePlusOne) & " 12:00 AM"
 
     ' Access the specified mailbox
     Set objMailbox = objNamespace.Folders(mailboxName)
@@ -113,7 +122,7 @@ Sub CountEmailsInTestFolder()
     ' Build filter string for date range using Restrict method
     ' This significantly improves performance for large folders
     ' Using >= startDate and < endDate+1 ensures we capture all emails on both start and end dates
-    filterString = "[ReceivedTime] >= '" & Format(startDate, "ddddd h:nn AMPM") & "' AND [ReceivedTime] < '" & Format(endDatePlusOne, "ddddd h:nn AMPM") & "'"
+    filterString = "[ReceivedTime] >= '" & filterStartDate & "' AND [ReceivedTime] < '" & filterEndDate & "'"
 
     ' Apply the filter to get only emails within the date range
     Set restrictedItems = objTestFolder.Items.Restrict(filterString)
