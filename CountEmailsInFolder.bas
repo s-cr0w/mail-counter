@@ -6,8 +6,21 @@ Sub CountEmailsInTestFolder()
     Dim objMailbox As Outlook.Folder
     Dim objInbox As Outlook.Folder
     Dim objTestFolder As Outlook.Folder
+    Dim objItem As Object
+    Dim objMail As Outlook.MailItem
     Dim emailCount As Long
+    Dim totalCount As Long
     Dim mailboxName As String
+    Dim startDateStr As String
+    Dim endDateStr As String
+    Dim startDate As Date
+    Dim endDate As Date
+    Dim categoryDict As Object
+    Dim categoryName As Variant
+    Dim categories As Variant
+    Dim cat As Variant
+    Dim resultMessage As String
+    Dim i As Integer
 
     ' Set the mailbox name
     mailboxName = "random@example.com"
@@ -18,6 +31,42 @@ Sub CountEmailsInTestFolder()
     ' Error handling
     On Error GoTo ErrorHandler
 
+    ' Get start date from user
+    startDateStr = InputBox("Enter the START date (YYYYMMDD):", "Start Date", Format(Date - 30, "yyyymmdd"))
+    If startDateStr = "" Then
+        MsgBox "Operation cancelled.", vbInformation, "Cancelled"
+        Exit Sub
+    End If
+
+    ' Validate and parse start date
+    If Not IsValidYYYYMMDD(startDateStr) Then
+        MsgBox "Invalid start date format. Please use YYYYMMDD (e.g., 20260213).", vbCritical, "Invalid Date"
+        Exit Sub
+    End If
+    startDate = ParseYYYYMMDD(startDateStr)
+
+    ' Get end date from user
+    endDateStr = InputBox("Enter the END date (YYYYMMDD):", "End Date", Format(Date, "yyyymmdd"))
+    If endDateStr = "" Then
+        MsgBox "Operation cancelled.", vbInformation, "Cancelled"
+        Exit Sub
+    End If
+
+    ' Validate and parse end date
+    If Not IsValidYYYYMMDD(endDateStr) Then
+        MsgBox "Invalid end date format. Please use YYYYMMDD (e.g., 20260213).", vbCritical, "Invalid Date"
+        Exit Sub
+    End If
+    endDate = ParseYYYYMMDD(endDateStr)
+    ' Set end date to end of day
+    endDate = endDate + 1 - 0.00001
+
+    ' Validate date range
+    If startDate > endDate Then
+        MsgBox "Start date cannot be after end date.", vbCritical, "Invalid Date Range"
+        Exit Sub
+    End If
+
     ' Access the specified mailbox
     Set objMailbox = objNamespace.Folders(mailboxName)
 
@@ -27,14 +76,96 @@ Sub CountEmailsInTestFolder()
     ' Get the "test" subfolder
     Set objTestFolder = objInbox.Folders("test")
 
-    ' Count the emails in the test folder
-    emailCount = objTestFolder.Items.Count
+    ' Create a dictionary to store category counts
+    Set categoryDict = CreateObject("Scripting.Dictionary")
+    categoryDict.CompareMode = 1 ' Text compare, case-insensitive
 
-    ' Display the count in a message box
-    MsgBox "The 'test' folder in mailbox '" & mailboxName & "' contains " & emailCount & " email(s).", _
-           vbInformation, "Email Count"
+    ' Initialize counters
+    emailCount = 0
+    totalCount = objTestFolder.Items.Count
+
+    ' Loop through all items in the folder
+    For Each objItem In objTestFolder.Items
+        ' Check if it's a mail item
+        If TypeOf objItem Is Outlook.MailItem Then
+            Set objMail = objItem
+
+            ' Check if the email is within the date range
+            If objMail.ReceivedTime >= startDate And objMail.ReceivedTime <= endDate Then
+                emailCount = emailCount + 1
+
+                ' Process categories
+                If objMail.Categories <> "" Then
+                    ' Split categories by semicolon (multiple categories possible)
+                    categories = Split(objMail.Categories, ";")
+                    For Each cat In categories
+                        cat = Trim(cat)
+                        If cat <> "" Then
+                            If categoryDict.Exists(cat) Then
+                                categoryDict(cat) = categoryDict(cat) + 1
+                            Else
+                                categoryDict.Add cat, 1
+                            End If
+                        End If
+                    Next cat
+                Else
+                    ' No category
+                    If categoryDict.Exists("(No Category)") Then
+                        categoryDict("(No Category)") = categoryDict("(No Category)") + 1
+                    Else
+                        categoryDict.Add "(No Category)", 1
+                    End If
+                End If
+            End If
+        End If
+    Next objItem
+
+    ' Build result message
+    resultMessage = "Email Count Report" & vbCrLf
+    resultMessage = resultMessage & String(50, "=") & vbCrLf & vbCrLf
+    resultMessage = resultMessage & "Mailbox: " & mailboxName & vbCrLf
+    resultMessage = resultMessage & "Folder: Inbox\test" & vbCrLf
+    resultMessage = resultMessage & "Date Range: " & Format(startDate, "yyyy-mm-dd") & " to " & Format(endDate, "yyyy-mm-dd") & vbCrLf
+    resultMessage = resultMessage & String(50, "-") & vbCrLf & vbCrLf
+    resultMessage = resultMessage & "Total emails in date range: " & emailCount & vbCrLf & vbCrLf
+
+    If emailCount > 0 Then
+        resultMessage = resultMessage & "Breakdown by Category:" & vbCrLf
+        resultMessage = resultMessage & String(50, "-") & vbCrLf
+
+        ' Sort and display categories
+        Dim sortedKeys() As Variant
+        sortedKeys = categoryDict.Keys
+
+        ' Simple bubble sort for categories
+        Dim temp As Variant
+        Dim j As Long
+        For i = LBound(sortedKeys) To UBound(sortedKeys) - 1
+            For j = i + 1 To UBound(sortedKeys)
+                If sortedKeys(i) > sortedKeys(j) Then
+                    temp = sortedKeys(i)
+                    sortedKeys(i) = sortedKeys(j)
+                    sortedKeys(j) = temp
+                End If
+            Next j
+        Next i
+
+        ' Display sorted categories
+        For i = LBound(sortedKeys) To UBound(sortedKeys)
+            categoryName = sortedKeys(i)
+            resultMessage = resultMessage & "  " & categoryName & ": " & categoryDict(categoryName) & vbCrLf
+        Next i
+    Else
+        resultMessage = resultMessage & "No emails found in the specified date range."
+    End If
+
+    ' Display the result
+    MsgBox resultMessage, vbInformation, "Email Count Report"
 
     ' Clean up
+    Set categoryDict = Nothing
+    Set objMail = Nothing
+    Set objItem = Nothing
     Set objTestFolder = Nothing
     Set objInbox = Nothing
     Set objMailbox = Nothing
@@ -50,8 +181,60 @@ ErrorHandler:
            vbCritical, "Error Accessing Folder"
 
     ' Clean up
+    Set categoryDict = Nothing
+    Set objMail = Nothing
+    Set objItem = Nothing
     Set objTestFolder = Nothing
     Set objInbox = Nothing
     Set objMailbox = Nothing
     Set objNamespace = Nothing
 End Sub
+
+' Helper function to validate YYYYMMDD format
+Function IsValidYYYYMMDD(dateStr As String) As Boolean
+    Dim yyyy As Integer
+    Dim mm As Integer
+    Dim dd As Integer
+
+    IsValidYYYYMMDD = False
+
+    ' Check length
+    If Len(dateStr) <> 8 Then Exit Function
+
+    ' Check if all characters are numeric
+    If Not IsNumeric(dateStr) Then Exit Function
+
+    ' Parse components
+    yyyy = CInt(Left(dateStr, 4))
+    mm = CInt(Mid(dateStr, 5, 2))
+    dd = CInt(Right(dateStr, 2))
+
+    ' Validate year (1900-2100)
+    If yyyy < 1900 Or yyyy > 2100 Then Exit Function
+
+    ' Validate month
+    If mm < 1 Or mm > 12 Then Exit Function
+
+    ' Validate day
+    If dd < 1 Or dd > 31 Then Exit Function
+
+    ' Check if the date is valid using IsDate
+    Dim testDate As String
+    testDate = mm & "/" & dd & "/" & yyyy
+    If Not IsDate(testDate) Then Exit Function
+
+    IsValidYYYYMMDD = True
+End Function
+
+' Helper function to parse YYYYMMDD to Date
+Function ParseYYYYMMDD(dateStr As String) As Date
+    Dim yyyy As Integer
+    Dim mm As Integer
+    Dim dd As Integer
+
+    yyyy = CInt(Left(dateStr, 4))
+    mm = CInt(Mid(dateStr, 5, 2))
+    dd = CInt(Right(dateStr, 2))
+
+    ParseYYYYMMDD = DateSerial(yyyy, mm, dd)
+End Function
